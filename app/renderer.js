@@ -1,3 +1,5 @@
+const { ipcRenderer } = require('electron');
+
 const marked = require('marked');
 
 const markdownView = document.querySelector('#markdown');
@@ -13,6 +15,15 @@ const openInDefaultButton = document.querySelector('#open-in-default');
 markdownView.addEventListener('keyup', (event) => {
   const currentContent = event.target.value;
   renderMarkdownToHtml(currentContent);
+});
+
+openFileButton.addEventListener('click', () => {
+  ipcRenderer.send('open-file');
+});
+
+ipcRenderer.on('file-opened', (event, file, content) => {
+  markdownView.value = content;
+  renderMarkdownToHtml(content);
 });
 
 const renderMarkdownToHtml = (markdown) => {

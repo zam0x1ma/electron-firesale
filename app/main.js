@@ -1,8 +1,11 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const fs = require('fs');
 const path = require('path');
 
+let mainWindow = null;
+
 function createWindow() {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 850,
     height: 600,
     show: false,
@@ -32,3 +35,26 @@ app.whenReady().then(() => {
 app.on('window-all-closed', function() {
   if (process.platform !== 'darwin') app.quit();
 });
+
+ipcMain.on('open-file', (event, arg) => {
+  getFileFromUser(event, 'file-opened');
+});
+
+const getFileFromUser = (event, replayChannel) => {
+  dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [
+      { name: 'Text Files', extensions: ['txt'] },
+      { name: 'Markdown Files', extensions: ['md', 'markdown'] },
+    ],
+  }).then(result => {
+    if (result.filePaths.length > 0) {
+      const file = result.filePaths[0];
+      const content = fs.readFileSync(file).toString();
+
+      event.reply(replayChannel, file, content);
+    }
+  }).catch(err => {
+    console.log(err);
+  });
+};
