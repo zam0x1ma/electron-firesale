@@ -1,5 +1,4 @@
 const { ipcRenderer } = require('electron');
-
 const marked = require('marked');
 
 const markdownView = document.querySelector('#markdown');
@@ -24,6 +23,10 @@ openFileButton.addEventListener('click', () => {
 ipcRenderer.on('file-opened', (event, file, content) => {
   markdownView.value = content;
   renderMarkdownToHtml(content);
+});
+
+newFileButton.addEventListener('click', () => {
+  ipcRenderer.send('new-file');
 });
 
 const renderMarkdownToHtml = (markdown) => {

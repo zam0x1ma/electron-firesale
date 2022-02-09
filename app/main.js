@@ -3,11 +3,24 @@ const fs = require('fs');
 const path = require('path');
 
 let mainWindow = null;
+const windows = new Set();
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
+  let x, y;
+
+  const currentWindow = BrowserWindow.getFocusedWindow();
+
+  if (currentWindow) {
+    const [ currentWindowX, currentWindowY ] = currentWindow.getPosition();
+    x = currentWindowX + 10;
+    y = currentWindowY + 10;
+  }
+
+  let newWindow = new BrowserWindow({
     width: 850,
     height: 600,
+    x: x,
+    y: y,
     show: false,
     webPreferences: {
       nodeIntegration: true,
@@ -15,13 +28,22 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile('app/index.html');
+  newWindow.loadFile('app/index.html');
 
-  // mainWindow.webContents.openDevTools();
+  // newWindow.webContents.openDevTools();
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+  newWindow.once('ready-to-show', () => {
+    newWindow.show();
   });
+
+  newWindow.on('closed', () => {
+    windows.delete(newWindow);
+    newWindow = null;
+  });
+
+  windows.add(newWindow);
+
+  return newWindow;
 }
 
 app.whenReady().then(() => {
@@ -37,11 +59,15 @@ app.on('window-all-closed', function() {
 });
 
 ipcMain.on('open-file', (event, arg) => {
-  getFileFromUser(event, 'file-opened');
+  getFileFromUser(event, 'file-opened', BrowserWindow.getFocusedWindow());
 });
 
-const getFileFromUser = (event, replayChannel) => {
-  dialog.showOpenDialog(mainWindow, {
+ipcMain.on('new-file', () => {
+  createWindow();
+});
+
+const getFileFromUser = (event, replyChannel, targetWindow) => {
+  dialog.showOpenDialog(targetWindow, {
     properties: ['openFile'],
     filters: [
       { name: 'Text Files', extensions: ['txt'] },
@@ -52,7 +78,7 @@ const getFileFromUser = (event, replayChannel) => {
       const file = result.filePaths[0];
       const content = fs.readFileSync(file).toString();
 
-      event.reply(replayChannel, file, content);
+      event.reply(replyChannel, file, content);
     }
   }).catch(err => {
     console.log(err);
